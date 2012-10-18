@@ -1,7 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <module codename="org.gephi.project.api">
-    <module_version install_time="1332622411877" last="true" origin="Ant" specification_version="0.8.0.2">
+    <module_version install_time="1332622411877" last="false" origin="Ant" specification_version="0.8.0.2">
         <file crc="1588406179" name="config/Modules/org-gephi-project-api.xml"/>
         <file crc="2101669325" name="modules/org-gephi-project-api.jar"/>
+    </module_version>
+    <module_version install_time="1350568700096" last="true" origin="Gephi Update Center" specification_version="0.8.1.1">
+        <file crc="3457933315" name="config/Modules/org-gephi-project-api.xml"/>
+        <file crc="216092282" name="modules/org-gephi-project-api.jar"/>
     </module_version>
 </module>

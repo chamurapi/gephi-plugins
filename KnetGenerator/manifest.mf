@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+OpenIDE-Module: org.uniba.fmph.knet.generator
+OpenIDE-Module-Localizing-Bundle: org/uniba/fmph/knet/generator/Bundle.properties
+OpenIDE-Module-Specification-Version: 1.0
+

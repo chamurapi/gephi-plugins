@@ -1,7 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <module codename="org.gephi.desktop.welcome">
-    <module_version install_time="1332622357920" last="true" origin="Ant" specification_version="0.8.0.3">
+    <module_version install_time="1332622357920" last="false" origin="Ant" specification_version="0.8.0.3">
         <file crc="3737723780" name="config/Modules/org-gephi-desktop-welcome.xml"/>
         <file crc="2122168689" name="modules/org-gephi-desktop-welcome.jar"/>
+    </module_version>
+    <module_version install_time="1350568700157" last="true" origin="Gephi Update Center" specification_version="0.8.0.4">
+        <file crc="3596204257" name="config/Modules/org-gephi-desktop-welcome.xml"/>
+        <file crc="2804164313" name="modules/org-gephi-desktop-welcome.jar"/>
     </module_version>
 </module>

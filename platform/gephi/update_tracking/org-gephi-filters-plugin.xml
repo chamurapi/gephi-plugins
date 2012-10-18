@@ -1,7 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <module codename="org.gephi.filters.plugin">
-    <module_version install_time="1332622420363" last="true" origin="Ant" specification_version="0.8.0.7">
+    <module_version install_time="1332622420363" last="false" origin="Ant" specification_version="0.8.0.7">
         <file crc="2959991801" name="config/Modules/org-gephi-filters-plugin.xml"/>
         <file crc="2884708943" name="modules/org-gephi-filters-plugin.jar"/>
+    </module_version>
+    <module_version install_time="1350568700121" last="true" origin="Gephi Update Center" specification_version="0.8.0.8">
+        <file crc="3483555525" name="config/Modules/org-gephi-filters-plugin.xml"/>
+        <file crc="3853829563" name="modules/org-gephi-filters-plugin.jar"/>
     </module_version>
 </module>
