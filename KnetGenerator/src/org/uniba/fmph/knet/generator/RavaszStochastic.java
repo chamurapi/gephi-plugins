@@ -4,15 +4,17 @@
  */
 package org.uniba.fmph.knet.generator;
 
-import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Label;
 import java.awt.TextField;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import javax.swing.JPanel;
+import javax.swing.JSlider;
 import org.gephi.desktop.project.api.ProjectControllerUI;
 import org.gephi.graph.api.Edge;
 import org.gephi.graph.api.Graph;
@@ -34,12 +36,14 @@ import org.openide.util.lookup.ServiceProvider;
  * @author pna
  */
 @ServiceProvider(service = Generator.class)
-public class RavaszDeterministic implements Generator {
+public class RavaszStochastic implements Generator {
 
+    private static Random r = new Random(System.currentTimeMillis());
     private boolean cancel = false;
     private ProgressTicket progressTicket;
     private long delay = 500;
     private int levels = 2;
+    private double p = 0.6;
     
     @Override
     public void generate(org.gephi.io.importer.api.ContainerLoader container) {
@@ -61,7 +65,7 @@ public class RavaszDeterministic implements Generator {
         GraphModel graphModel =   graphController.getModel();
         
         //Create list of nodes and a random obj
-        Node node0 = createFirstModel(graphModel);
+        Node[] node0 = createFirstModel(graphModel);
         
         Graph graph = graphModel.getGraph();
      
@@ -74,9 +78,12 @@ public class RavaszDeterministic implements Generator {
             newNodes.addAll(copy(graph, nodes, edges));
             newNodes.addAll(copy(graph, nodes, edges));
             for(Node n:newNodes){
-                Edge e = graphModel.factory().newEdge(node0, n);
-                graph.addEdge(e);
+                if (r.nextDouble()<p){
+                    Edge e = graphModel.factory().newEdge(selectPreferential(graph, node0), n);
+                    graph.addEdge(e);
+                }
             }
+            node0 = graph.getNodes().toArray();
         }
         Progress.finish(progressTicket);
     
@@ -102,7 +109,7 @@ public class RavaszDeterministic implements Generator {
     
     @Override
     public String getName() {
-        return "Ravasz Deterministic Hierarchical model";
+        return "Ravasz Stochastic Hierarchical Model";
     }
 
     @Override
@@ -110,31 +117,42 @@ public class RavaszDeterministic implements Generator {
         
         return new GeneratorUI() {
             private TextField field;
-            private RavaszDeterministic gnrtr;
+            private JSlider perc;
+            
+            private RavaszStochastic gnrtr;
             @Override
             public JPanel getPanel() {
                JPanel content = new JPanel();
-               content.setLayout(new GridLayout(1,2));
+               content.setLayout(new GridLayout(2,2));
                content.add(new Label("Levels"));
-               field = new TextField(5);
+               field = new TextField("5");
                content.add(field);               
+               content.add(new Label("Part of module"));
+               
+               perc= new JSlider(JSlider.HORIZONTAL, 0, 100, 50);
+               content.add(perc);
                return content;
             }
 
             @Override
             public void setup(Generator gnrtr) {
-                this.gnrtr = ((RavaszDeterministic) gnrtr);
+                this.gnrtr = ((RavaszStochastic) gnrtr);
             }
 
             @Override
             public void unsetup() {
                 gnrtr.setLevels(Integer.parseInt(field.getText()));
+                gnrtr.setPercents((double)perc.getValue()/(double)100);
             }
         };
     }
     
     public void setLevels(int levels){
         this.levels=levels;
+    }
+
+     public void setPercents(double perc){
+        this.p = perc;
     }
 
     @Override
@@ -148,7 +166,7 @@ public class RavaszDeterministic implements Generator {
         this.progressTicket = pt;
     }
 
-    private Node createFirstModel(GraphModel graphModel) {
+    private Node[] createFirstModel(GraphModel graphModel) {
         Node nodea = graphModel.factory().newNode();
         Node nodeb = graphModel.factory().newNode();
         Node nodec = graphModel.factory().newNode();
@@ -169,7 +187,25 @@ public class RavaszDeterministic implements Generator {
         g.addEdge(graphModel.factory().newEdge(node0, noded));
         g.addEdge(graphModel.factory().newEdge(node0, nodec));
         g.addEdge(graphModel.factory().newEdge(node0, nodea));
-        return node0;
+        return new Node[]{node0, nodea, nodeb, nodec, noded};
+    }
+
+    private Node selectPreferential(Graph graph, Node[] node0) {
+        Map<Node, Integer> degs = new HashMap<Node, Integer>(node0.length);
+        int sum = 0;
+        for (Node node: node0){
+            int k =  graph.getEdges(node).toArray().length;
+            degs.put(node, k);                    
+            sum+=k;
+        }
+        int rnd = r.nextInt(sum);
+        int sum2=0;
+        for(Node node:node0){
+            if (rnd>=sum2 && rnd<(sum2+=degs.get(node))){
+              return node;  
+            }            
+        }
+        return null;
     }
     
 }
