@@ -23,10 +23,10 @@ public enum SelectionAlgorithm {
         public <T> T select(NodesProvider<T> provider) {
             
             int counter = 0;
-            int target = random.nextInt(provider.getDegreeSum());
+            int target = random.nextInt(provider.getDegreeSum()+provider.size());
             for (int i=0;i<provider.size();i++){
                 final T node = provider.get(i);
-                if (target>=counter && target<(counter+=provider.getDegree(node))){
+                if (target>=counter && target<(counter+=provider.getDegree(node)+1)){
                     return node;
                 }
             }
