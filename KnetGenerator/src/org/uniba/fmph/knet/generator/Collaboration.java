@@ -6,20 +6,14 @@ package org.uniba.fmph.knet.generator;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.gephi.io.importer.api.ContainerLoader;
-import org.gephi.io.generator.spi.Generator;
-import org.gephi.io.generator.spi.GeneratorUI;
-import org.gephi.io.importer.api.NodeDraft;
-import org.gephi.utils.progress.Progress;
-import org.openide.util.Lookup;
-import org.openide.util.lookup.ServiceProvider;
+import org.uniba.fmph.knet.generator.graph.Graph;
 
 /**
  *
  * @author pna
  */
-@ServiceProvider(service = Generator.class)
-public class Collaboration extends AbstractGennerator {
+
+public class Collaboration<T> extends AbstractGenerator<T> {
 
     
     private int networkSize = 1000;
@@ -29,43 +23,27 @@ public class Collaboration extends AbstractGennerator {
     private double initialNetworkDensity  = 0.6;
     private int newEdges = 1;       
 
-    @Override
-    protected int workUnits() {
-        return 12;
-    }
     
     
     
     @Override
-    protected void generateGraph(ContainerLoader container) {
+    protected void generateGraph(Graph<T> graph) {
         
         //Create list of nodes and a random obj
-        createFirstModel(container);
-        Progress.progress(getProgressTicket());
+        createFirstModel(graph);
+        getProgressIndicator().indicateProgress();
         List<Double> percentageOfExisting = new ArrayList<Double>();
         for(int i=getInitialNetworkSize();i<getNetworkSize() && !isCanceled();i++){
-            percentageOfExisting.add(step(i, container));          
-            if ((i-getInitialNetworkSize()+1)%((getNetworkSize()-getInitialNetworkSize())/10)==0){
-              Progress.progress(getProgressTicket());
+            percentageOfExisting.add(step(i, graph));   
+            int x = (getNetworkSize()-getInitialNetworkSize())/10;
+            x= x==0 ? 1:x;
+            if ((i-getInitialNetworkSize()+1)%x==0){
+              getProgressIndicator().indicateProgress();
             }
         }
         double rate = average(percentageOfExisting.toArray(new Double[0]));
-        Progress.finish(getProgressTicket());
     }
 
-    @Override
-    public String getName() {
-        return "Colaboration model";
-    }
-    
-    
-
-    
-    @Override
-    public GeneratorUI getUI() {        
-        return Lookup.getDefault().lookup(CollaborationUI.class);            
-    }
-    
     public void setNetworkSize(int size){
         this.networkSize=size;
     }
@@ -78,41 +56,35 @@ public class Collaboration extends AbstractGennerator {
         this.newEdges=size;
     }
 
-    private void createFirstModel(final ContainerLoader container) {
+    private void createFirstModel(final Graph<T> graph) {
         for (int i= 0; i<getInitialNetworkSize() && !isCanceled();i++){
-           addNode(container);
+           addNode(graph);
         }
-        new MatrixListIterator<NodeDraft>(){
+        new MatrixListIterator<T>(){
             @Override
-            public void step(NodeDraft arrayI, NodeDraft arrayJ) {
+            public void step(T arrayI, T arrayJ) {
               if (random.nextDouble() < getInitialNetworkDensity()){                  
-                   addEdge(container, arrayJ, arrayJ);
+                   addEdge(graph, arrayJ, arrayJ);
               }
               if (isCanceled()){
                   cancel();
               }
             }
             
-        }.iterate(getNodes());
+        }.iterate(graph.getNodes());
     }
 
     
-    private double step(int s, ContainerLoader container) {
+    private double step(int s, Graph graph) {
         int newKliques = newKliques(s);
-        Double[] percentageOfExisting = new Double[newKliques];
+        Double[] percentageOfExisting = new Double[newKliques+1];
         for(int i=0; i<newKliques && !isCanceled(); i++){
-            percentageOfExisting[i] = newKlique(container);
+            percentageOfExisting[i] = newKlique(graph);
         }
-        NodeDraft[] selected = Selector.select(this, newEdges(), SelectionAlgorithm.PREFFERENTIAL, false);
-        NodeDraft newNode = addNode(container);
-        for(NodeDraft oldNode: selected){
-            if (!container.edgeExists(newNode, oldNode)){
-                addEdge(container, newNode, oldNode);
-            }
-            if (isCanceled()){
-                break;
-            }
-        }        
+        List<T> selected = Selector.select(graph, newEdges(), SelectionAlgorithm.PREFFERENTIAL, false);
+        T newNode = addNode(graph);
+        selected.add(newNode);
+        percentageOfExisting[percentageOfExisting.length-1]=fillKlique(graph, selected);
         return average(percentageOfExisting);
     }
         
@@ -121,17 +93,16 @@ public class Collaboration extends AbstractGennerator {
         return (int)Math.round(s*getC());
     }
 
-    private double newKlique(final ContainerLoader container) {
-        NodeDraft[] kliqueNodes = Selector.select(this, cliqueSize(), SelectionAlgorithm.RANDOM, true);
-        int ks = kliqueNodes.length;
-        Counter<NodeDraft> created = new Counter<NodeDraft>();
-        new MatrixArrayIterator<NodeDraft>(created){
+    private double fillKlique(final Graph graph, List<T> kliqueNodes) {
+        int ks = kliqueNodes.size();
+        Counter<T> created = new Counter<T>();
+        new MatrixListIterator<T>(created){
 
             @Override
-            public void step(NodeDraft arrayI, NodeDraft arrayJ) {
-                if (container.edgeExists(arrayI, arrayJ)){
+            public void step(T arrayI, T arrayJ) {
+                if (!graph.containsEdge(arrayI, arrayJ) ){
                    getAcumulator().accumulate(arrayJ, arrayJ);                
-                   addEdge(container, arrayI, arrayJ);
+                   addEdge(graph, arrayI, arrayJ);
                } 
                 if (isCanceled()){
                     cancel();                    
@@ -139,8 +110,15 @@ public class Collaboration extends AbstractGennerator {
             }
             
         }.iterate(kliqueNodes);
-        
-        return (double)created.getResult()/(double)(ks*(ks-1)/2);
+        int potential = ks*(ks-1)/2;
+        return (double)(potential - created.getResult())/(double)potential;
+    }
+
+    
+    
+    private double newKlique(Graph graph) {
+        List<T> kliqueNodes = Selector.select(graph, cliqueSize(), SelectionAlgorithm.RANDOM, true);
+        return fillKlique(graph, kliqueNodes);
     }
 
 
@@ -184,7 +162,7 @@ public class Collaboration extends AbstractGennerator {
     /**
      * @return the kliqueSize
      */
-    public Integer getCliqueSize() {
+    public int getCliqueSize() {
         return cliqueSize;
     }
 
@@ -198,14 +176,14 @@ public class Collaboration extends AbstractGennerator {
     /**
      * @return the initialNetworkSize
      */
-    public Integer getInitialNetworkSize() {
+    public int getInitialNetworkSize() {
         return initialNetworkSize;
     }
 
     /**
      * @return the initialNetworkDensity
      */
-    public Double getInitialNetworkDensity() {
+    public double getInitialNetworkDensity() {
         return initialNetworkDensity;
     }
 
@@ -219,7 +197,7 @@ public class Collaboration extends AbstractGennerator {
     /**
      * @return the newEdges
      */
-    public Integer getNewEdges() {
+    public int getNewEdges() {
         return newEdges;
     }
 

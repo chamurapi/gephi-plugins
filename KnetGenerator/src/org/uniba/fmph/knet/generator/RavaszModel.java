@@ -4,72 +4,72 @@
  */
 package org.uniba.fmph.knet.generator;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import org.gephi.io.importer.api.ContainerLoader;
-import org.gephi.io.importer.api.NodeDraft;
-import org.gephi.utils.progress.Progress;
+import org.uniba.fmph.knet.generator.graph.Graph;
 
 /**
  *
  * @author pna
  */
-public abstract class RavaszModel extends AbstractGennerator {
+public abstract class RavaszModel<T> extends AbstractGenerator<T> {
     protected static final String PREVIOUS = "PREVIOUS";
 
-    private NodesProvider<NodeDraft> previous;
+    private NodesProvider<T> previous;
     private int levels = 2;
     private int pattern = 4;
    
-     @Override
-    protected int workUnits() {
-        return (int)Math.pow(pattern+1, levels);
-    }
-    
+   
     @Override
-    public void generateGraph(ContainerLoader container) {
+    public void generateGraph(Graph<T> graph) {
         
         //Create list of nodes and a random obj
-        createFirstModel(container);
+        createFirstModel(graph);
         
-        for(int l=1;l<getLevels() && !isCanceled() ;l++){
+        for(int l=0;l<getLevels() && !isCanceled() ;l++){
             
-            NodeDraft[][] copies = new NodeDraft[getPattern()][];
+            List<List<T>> copies = new ArrayList<List<T>>(getPattern());
             for(int i=0;i<getPattern() && !isCanceled();i++){
-                copies[i] = copy(container, getPrevious());
+                copies.add(copy(graph, getPrevious()));
             }
-            for(int i=0;i<getPattern() && !isCanceled();i++){
-                for (int j=0;j<copies[i].length && !isCanceled();j++){
-                    if (shouldHaveEdge(copies[i][j])){
-                        addEdge(container, selectFrom(getPrevious()), copies[i][j]);
+            for(List<T> module: copies){
+                for (T node: module){
+                    if (isCanceled()){
+                        break;
+                    }
+                    if (shouldHaveEdge(node)){
+                        addEdge(graph, selectFrom(getPrevious()), node);
                     }
                 }
             }
-            afterLevel();
+            afterLevel(graph);
         }
-        Progress.finish(getProgressTicket());
     
     }
     
-    protected abstract NodeDraft selectFrom(NodesProvider<NodeDraft> previous);
+    protected abstract T selectFrom(NodesProvider<T> previous);
     
-    public NodeDraft[] copy(final ContainerLoader container, NodesProvider<NodeDraft> toCopy){
-        NodeDraft[] newNodes = new NodeDraft[toCopy.size()];
-        final Map<NodeDraft, NodeDraft> copyN = new HashMap<NodeDraft, NodeDraft>();
-        for(int i=0;i<toCopy.size() && !isCanceled(); i++){
-            newNodes[i] = addNode(container);
-            Progress.progress(getProgressTicket());
-            copyN.put(newNodes[i], toCopy.get(i));
-            whenCopyCreated(newNodes[i], toCopy.get(i));
+    public List<T> copy(final Graph<T> graph, NodesProvider<T> toCopy){
+        List<T> newNodes = new ArrayList<T>(toCopy.size());
+        final Map<T, T> copyN = new HashMap<T, T>();
+        int s = toCopy.size();
+        for(int i=0;i< s && !isCanceled(); i++){
+            T newNode = addNode(graph);
+            newNodes.add(newNode);
+            getProgressIndicator().indicateProgress();
+            copyN.put(newNode, toCopy.get(i));
+            whenCopyCreated(newNode, toCopy.get(i));
         }
-        new MatrixArrayIterator<NodeDraft>(){
+        new MatrixListIterator<T>(){
 
             @Override
-            public void step(NodeDraft arrayI, NodeDraft arrayJ) {
-                NodeDraft a = copyN.get(arrayI);
-                NodeDraft b = copyN.get(arrayJ);
-                if (container.edgeExists(a, b)){
-                    addEdge(container, arrayI, arrayJ);
+            public void step(T arrayI, T arrayJ) {
+                T a = copyN.get(arrayI);
+                T b = copyN.get(arrayJ);
+                if (graph.containsEdge(a, b)){
+                    addEdge(graph, arrayI, arrayJ);
                 }
                 if (isCanceled()) {
                     cancel();
@@ -86,33 +86,33 @@ public abstract class RavaszModel extends AbstractGennerator {
 
     
     
-    protected NodeDraft[] createFirstModel(ContainerLoader container){
-        NodeDraft[] newNodes = new NodeDraft[getPattern()+1] ;
-        newNodes[0]=addNode(container);
-        Progress.progress(getProgressTicket());
+    protected List<T> createFirstModel(Graph<T> graph){
+        List<T> newNodes = new ArrayList<T>(getPattern()+1) ;
+        newNodes.add(addNode(graph));
+        getProgressIndicator().indicateProgress();
         for(int i=1;i<=getPattern();i++){
-            newNodes[i] = addNode(container);            
-            if (i>2){
-                addEdge(container, newNodes[i-1], newNodes[i]);
+            newNodes.add(addNode(graph));            
+            if (i>1){
+                addEdge(graph, newNodes.get(i-1), newNodes.get(i));
             }
-            addEdge(container, newNodes[i], newNodes[0]);
+            addEdge(graph, newNodes.get(i), newNodes.get(0));
         }
-        addEdge(container, newNodes[1], newNodes[getPattern()]);
-        previous = createSnapshot(PREVIOUS);
+        addEdge(graph, newNodes.get(1), newNodes.get(getPattern()));
+        previous = createSnapshot(PREVIOUS, graph);
         return newNodes;
     }
 
     /**
      * @return the levels
      */
-    public Integer getLevels() {
+    public int getLevels() {
         return levels;
     }
 
     /**
      * @return the pattern
      */
-    public Integer getPattern() {
+    public int getPattern() {
         return pattern;
     }
 
@@ -123,18 +123,18 @@ public abstract class RavaszModel extends AbstractGennerator {
         this.pattern = pattern;
     }
    
-    protected void afterLevel(){
-       previous = createSnapshot(PREVIOUS);
+    protected void afterLevel(Graph<T> graph){
+       previous = createSnapshot(PREVIOUS, graph);
     };
 
-    protected abstract void whenCopyCreated(NodeDraft newNode, NodeDraft oldNode);
+    protected abstract void whenCopyCreated(T newNode, T oldNode);
 
-    protected abstract boolean shouldHaveEdge(NodeDraft nodeDraft);
+    protected abstract boolean shouldHaveEdge(T nodeDraft);
 
     /**
      * @return the previous
      */
-    public NodesProvider<NodeDraft> getPrevious() {
+    public NodesProvider<T> getPrevious() {
         return previous;
     }
 

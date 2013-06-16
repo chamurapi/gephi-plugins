@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.uniba.fmph.knet.generator.ui;
+package org.uniba.fmph.knet.generator.gephi.ui;
 
 import java.awt.Label;
 import java.awt.TextField;

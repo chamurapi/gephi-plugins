@@ -4,9 +4,12 @@
  */
 package org.uniba.fmph.knet.generator;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.uniba.fmph.knet.generator.graph.Graph;
 
 /**
  *
@@ -17,10 +20,17 @@ public class Snapshot<T> implements NodesProvider<T> {
     final Map<T,Integer> degrees;
     final int degreeSum;
 
-    public Snapshot(List<T> nodes, Map<T,Integer> degrees, int degreeSum ){ 
-       this.nodes = Collections.unmodifiableList(nodes);
-       this.degrees = Collections.unmodifiableMap(degrees);
-       this.degreeSum = degreeSum;
+    public Snapshot(NodesProvider<T> provider ){ 
+       List<T> list =  new ArrayList<T>(provider.size());
+       Map<T, Integer> map = new HashMap<T, Integer>(provider.size());
+       for(int i=0;i<provider.size();i++){
+           T node = provider.get(i);
+           list.add(node);
+           map.put(node, provider.getDegree(node));
+       }
+       this.nodes = Collections.unmodifiableList(list);
+       this.degrees = Collections.unmodifiableMap(map);
+       this.degreeSum = provider.getDegreeSum();
     }
     
     
@@ -36,13 +46,13 @@ public class Snapshot<T> implements NodesProvider<T> {
     }
 
     @Override
-    public int degree(T node) {
+    public int getDegree(T node) {
        return degrees.get(node);
     }
 
     @Override
-    public int degreeSum() {
+    public int getDegreeSum() {
         return degreeSum;
     }
-    
+   
 }

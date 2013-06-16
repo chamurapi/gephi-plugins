@@ -8,13 +8,6 @@ package org.uniba.fmph.knet.generator;
  *
  * @author lenivo-pna
  */
-public interface NodesProvider<T> {
-    
-    int size();
-    
-    T get(int i);
-    
-    int getDegree(T node);
-    
-    int getDegreeSum();
+public interface ProgressIndicator {
+    void indicateProgress();
 }
